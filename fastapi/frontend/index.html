@@ -1,0 +1,1891 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAG Video Script Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <style>
+        /* ── Reset & Base ──────────────────────────────────────── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0b0e14;
+            --surface: #141820;
+            --surface-2: #1a1f2e;
+            --surface-3: #222838;
+            --border: #2a3040;
+            --text: #e4e8f0;
+            --text-dim: #8891a5;
+            --accent: #6c63ff;
+            --accent-glow: rgba(108, 99, 255, 0.25);
+            --accent-2: #00d4aa;
+            --accent-2-glow: rgba(0, 212, 170, 0.20);
+            --danger: #ff4d6a;
+            --warning: #ffb84d;
+            --success: #00d4aa;
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* ── Layout ────────────────────────────────────────────── */
+        .app {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        /* ── Header ────────────────────────────────────────────── */
+        .header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -1.2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            border-radius: 3px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, var(--accent) 50%, var(--accent-2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            margin-top: 0.5rem;
+        }
+
+        /* ── Cards ─────────────────────────────────────────────── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            border-color: rgba(108, 99, 255, 0.3);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-header .step-badge {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .card-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* ── Upload Zone ───────────────────────────────────────── */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(108, 99, 255, 0.05);
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-zone .icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-zone p {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        .upload-zone .formats {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: 0.4rem;
+            opacity: 0.7;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: var(--surface-2);
+            border-radius: var(--radius-sm);
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .file-info .name {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .file-info .size {
+            color: var(--text-dim);
+            font-size: 0.82rem;
+        }
+
+        /* ── Buttons ───────────────────────────────────────────── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.7rem 1.4rem;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            color: #fff;
+            box-shadow: 0 2px 12px var(--accent-glow);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--surface-3);
+        }
+
+        .btn-danger {
+            background: rgba(255, 77, 106, 0.12);
+            color: var(--danger);
+            border: 1px solid rgba(255, 77, 106, 0.25);
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 77, 106, 0.2);
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* ── Form Controls ─────────────────────────────────────── */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 0.6rem 0.85rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: var(--accent);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-top: 0.5rem;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            accent-color: var(--accent);
+            width: 16px;
+            height: 16px;
+        }
+
+        .checkbox-row label {
+            font-size: 0.88rem;
+            color: var(--text);
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        /* ── Status Badge ──────────────────────────────────────── */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.6rem 1rem;
+            background: var(--surface-2);
+            border-radius: var(--radius-sm);
+            margin-top: 1rem;
+            font-size: 0.88rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-dot.uploaded {
+            background: var(--warning);
+        }
+
+        .status-dot.parsing,
+        .status-dot.indexing,
+        .status-dot.generating {
+            background: var(--accent);
+            animation: pulse-dot 1.2s infinite;
+        }
+
+        .status-dot.parsed,
+        .status-dot.indexed,
+        .status-dot.generated {
+            background: var(--success);
+        }
+
+        .status-dot.failed {
+            background: var(--danger);
+        }
+
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(1.3);
+            }
+        }
+
+        /* ── Spinner ───────────────────────────────────────────── */
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ── Script Output ─────────────────────────────────────── */
+        .script-output {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .script-header {
+            padding: 1.25rem 1.5rem;
+            background: linear-gradient(135deg, rgba(108, 99, 255, 0.1), rgba(0, 212, 170, 0.08));
+            border-bottom: 1px solid var(--border);
+        }
+
+        .script-header h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+        }
+
+        .script-meta {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .script-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .script-body {
+            padding: 1.5rem;
+        }
+
+        .script-block {
+            margin-bottom: 1.5rem;
+        }
+
+        .script-block-title {
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .script-block p,
+        .script-block .narration {
+            color: var(--text);
+            font-size: 0.92rem;
+            line-height: 1.75;
+        }
+
+        .hook-text {
+            font-size: 1.05rem;
+            font-weight: 500;
+            font-style: italic;
+            color: var(--accent-2);
+            padding: 1rem;
+            background: rgba(0, 212, 170, 0.06);
+            border-left: 3px solid var(--accent-2);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        }
+
+        .section-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+        }
+
+        .section-card .summary {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-bottom: 0.75rem;
+        }
+
+        .section-card .narration {
+            font-size: 0.92rem;
+            line-height: 1.7;
+            margin-bottom: 0.75rem;
+        }
+
+        .visuals-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+
+        .visual-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.3rem 0.7rem;
+            background: rgba(108, 99, 255, 0.1);
+            border: 1px solid rgba(108, 99, 255, 0.2);
+            border-radius: 20px;
+            font-size: 0.78rem;
+            color: var(--accent);
+        }
+
+        .takeaways {
+            padding: 1rem;
+            background: var(--surface-2);
+            border-radius: var(--radius-sm);
+        }
+
+        .takeaways li {
+            padding: 0.3rem 0;
+            font-size: 0.9rem;
+            list-style: none;
+        }
+
+        .takeaways li::before {
+            content: '✦ ';
+            color: var(--accent-2);
+        }
+
+        /* ── Toast ─────────────────────────────────────────────── */
+        .toast-container {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            padding: 0.8rem 1.2rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.88rem;
+            font-weight: 500;
+            animation: slideIn 0.3s ease;
+            max-width: 380px;
+        }
+
+        .toast.success {
+            background: rgba(0, 212, 170, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(0, 212, 170, 0.3);
+        }
+
+        .toast.error {
+            background: rgba(255, 77, 106, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(255, 77, 106, 0.3);
+        }
+
+        .toast.info {
+            background: rgba(108, 99, 255, 0.15);
+            color: var(--accent);
+            border: 1px solid rgba(108, 99, 255, 0.3);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* ── Full Narration ────────────────────────────────────── */
+        .narration-full {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 1.5rem;
+            font-size: 0.92rem;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        /* ── Hidden ────────────────────────────────────────────── */
+        .hidden {
+            display: none !important;
+        }
+
+        /* ── Scrollbar ─────────────────────────────────────────── */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        /* ── Storyboard (Phase 3) ── */
+        .scenes-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .scene-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+
+        .scene-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .scene-header {
+            padding: 1rem 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .scene-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .scene-badge {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            background: var(--surface-3);
+            border-radius: 12px;
+            color: var(--text-dim);
+        }
+
+        .scene-content {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 1.5rem;
+            padding: 1.5rem;
+        }
+
+        @media (max-width: 850px) {
+            .scene-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .scene-media {
+            background: #000;
+            border-radius: var(--radius-sm);
+            aspect-ratio: 16/9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid var(--border);
+        }
+
+        .scene-media img,
+        .scene-media video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .asset-status-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .asset-badge {
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .asset-badge.missing {
+            background: rgba(255, 255, 255, 0.05);
+            color: #666;
+        }
+
+        .asset-badge.ready {
+            background: rgba(0, 212, 170, 0.15);
+            color: var(--success);
+        }
+
+        .asset-badge.generating {
+            background: rgba(108, 99, 255, 0.15);
+            color: var(--accent);
+        }
+
+        .asset-badge.error {
+            background: rgba(255, 77, 106, 0.15);
+            color: var(--danger);
+        }
+
+        .asset-badge.outdated {
+            background: rgba(255, 184, 77, 0.15);
+            color: var(--warning);
+        }
+
+        .scene-card {
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .scene-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.8rem;
+        }
+
+        .scene-header h3 {
+            font-size: 1.1rem;
+            color: var(--gold);
+        }
+
+        .scene-badge {
+            font-size: 0.75rem;
+            background: var(--gold-glow);
+            color: var(--gold);
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        .scene-content {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        @media(max-width: 768px) {
+            .scene-content {
+                flex-direction: column;
+            }
+        }
+
+        .scene-text {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 0.95rem;
+        }
+
+        .scene-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .scene-media {
+            flex: 1;
+            background: var(--surface);
+            border-radius: 6px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px dashed var(--border);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .scene-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+        }
+
+        .scene-media audio {
+            width: 90%;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--surface);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-dim);
+        }
+
+        /* ── Progress Steps ────────────────────────────────────── */
+        .pipeline-steps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            margin-bottom: 2rem;
+            padding: 1rem 0;
+        }
+
+        .p-step {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .p-step.active {
+            color: var(--accent);
+        }
+
+        .p-step.done {
+            color: var(--success);
+        }
+
+        .p-step .p-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .p-step.done .p-num {
+            background: var(--success);
+            color: var(--bg);
+            border-color: var(--success);
+        }
+
+        .p-step.active .p-num {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        .p-connector {
+            width: 40px;
+            height: 2px;
+            background: var(--border);
+            flex-shrink: 0;
+        }
+
+        .p-connector.done {
+            background: var(--success);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎬 RAG Video Script Generator</h1>
+            <p>Upload a document → Build index → Generate narration-ready video scripts</p>
+        </div>
+
+        <!-- Pipeline Progress -->
+        <div class="pipeline-steps">
+            <div class="p-step active" id="step-1">
+                <span class="p-num">1</span> Upload
+            </div>
+            <div class="p-connector" id="conn-1"></div>
+            <div class="p-step" id="step-2">
+                <span class="p-num">2</span> Index
+            </div>
+            <div class="p-connector" id="conn-2"></div>
+            <div class="p-step" id="step-3">
+                <span class="p-num">3</span> Generate
+            </div>
+        </div>
+
+        <!-- Step 1: Upload -->
+        <div class="card" id="upload-card">
+            <div class="card-header">
+                <div class="step-badge">1</div>
+                <h2>Upload Document</h2>
+            </div>
+            <div class="upload-zone" id="drop-zone">
+                <input type="file" id="file-input" accept=".pdf,.docx,.pptx,.txt" />
+                <div class="icon">📄</div>
+                <p>Drop your document here or click to browse</p>
+                <div class="formats">PDF · DOCX · PPTX · TXT — up to 50 MB</div>
+            </div>
+            <div class="file-info hidden" id="file-info">
+                <span>📎</span>
+                <span class="name" id="file-name"></span>
+                <span class="size" id="file-size"></span>
+            </div>
+            <div class="btn-row" style="margin-top: 1rem;">
+                <button class="btn btn-primary" id="btn-upload" disabled>
+                    Upload Document
+                </button>
+            </div>
+            <!-- Status -->
+            <div class="status-bar hidden" id="upload-status">
+                <div class="status-dot" id="status-dot"></div>
+                <span id="status-text">—</span>
+                <span style="margin-left: auto; font-size: 0.82rem; color: var(--text-dim);" id="doc-id-display"></span>
+            </div>
+        </div>
+
+        <!-- Step 2: Build Index -->
+        <div class="card hidden" id="index-card">
+            <div class="card-header">
+                <div class="step-badge">2</div>
+                <h2>Build Search Index</h2>
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 1rem;">
+                Parse the document, split into chunks, generate embeddings, and create a FAISS vector index.
+            </p>
+            <div class="btn-row">
+                <button class="btn btn-primary" id="btn-index">
+                    Build Index
+                </button>
+            </div>
+            <div class="status-bar hidden" id="index-status">
+                <div class="spinner"></div>
+                <span id="index-status-text">Building…</span>
+            </div>
+        </div>
+
+        <!-- Step 3: Generate Script -->
+        <div class="card hidden" id="generate-card">
+            <div class="card-header">
+                <div class="step-badge">3</div>
+                <h2>Generate Video Script</h2>
+            </div>
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label>Goal / Instruction</label>
+                    <textarea id="inp-goal"
+                        placeholder="e.g. Generate a 3-minute beginner-friendly video script explaining the key findings">Generate a 3-minute beginner-friendly video script</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Target Audience</label>
+                    <input type="text" id="inp-audience" value="college students" />
+                </div>
+                <div class="form-group">
+                    <label>Tone</label>
+                    <select id="inp-tone">
+                        <option value="beginner-friendly" selected>Beginner Friendly</option>
+                        <option value="academic">Academic</option>
+                        <option value="professional">Professional</option>
+                        <option value="youtube-explainer">YouTube Explainer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Duration (minutes)</label>
+                    <input type="number" id="inp-duration" value="3" min="1" max="30" />
+                </div>
+                <div class="form-group">
+                    <label>Depth</label>
+                    <select id="inp-depth">
+                        <option value="short">Short</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="long">Long</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Output Language</label>
+                    <input type="text" id="inp-language" value="English" />
+                </div>
+                <div class="form-group">
+                    <label>Focus Areas (comma separated)</label>
+                    <input type="text" id="inp-focus" placeholder="e.g. methodology, results, conclusion" />
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="inp-analogies" checked />
+                        <label for="inp-analogies">Include analogies</label>
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="inp-visuals" checked />
+                        <label for="inp-visuals">Include visual cues</label>
+                    </div>
+                </div>
+            </div>
+            <div class="btn-row" style="margin-top: 1.25rem;">
+                <button class="btn btn-primary" id="btn-generate">
+                    ✨ Generate Script
+                </button>
+                <button class="btn btn-danger" id="btn-delete">
+                    🗑 Delete Document
+                </button>
+            </div>
+            <div class="status-bar hidden" id="gen-status">
+                <div class="spinner"></div>
+                <span id="gen-status-text">Generating script via Groq LLM…</span>
+            </div>
+        </div>
+
+        <!-- Script Output -->
+        <div class="hidden" id="script-output-section">
+            <div class="script-output" id="script-container"></div>
+            <!-- Storyboard Section (Phase 3) -->
+            <div id="storyboard-section" class="panel hidden" style="margin-top: 2rem;">
+                <div class="panel-header"
+                    style="justify-content: space-between; display: flex; align-items: center; margin-bottom: 1rem;">
+                    <h2>🎬 Video Storyboard</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="btn-storyboard" class="btn btn-secondary">🪄 Generate Storyboard</button>
+                        <button id="btn-assemble-clips" class="btn btn-secondary">🎞 Assemble Clips</button>
+                        <button id="btn-render-final" class="btn btn-primary">🎬 Render Final Movie</button>
+                        <button id="btn-rebuild-fast" class="btn btn-accent"
+                            style="background:var(--primary); color:white; border:none; display:none;">⚡ Fast Rebuild
+                            (Cache)</button>
+                    </div>
+                </div>
+                <!-- Final Video Preview (Hidden until rendered) -->
+                <div id="final-video-card" class="card hidden"
+                    style="background: var(--surface-2); border: 2px solid var(--accent-2);">
+                    <div class="card-header">
+                        <div class="step-badge" style="background: var(--accent-2);">✓</div>
+                        <h2>Final Video Export Ready</h2>
+                    </div>
+                    <div
+                        style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem; padding: 1rem;">
+                        <video id="final-video-player" controls
+                            style="width: 100%; border-radius: var(--radius); background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.5);"></video>
+                        <div class="btn-row">
+                            <a id="download-video-link" href="#" download class="btn btn-primary"
+                                style="background: var(--accent-2); text-decoration: none;">⬇ Download MP4</a>
+                            <button id="btn-refresh-preview" class="btn btn-secondary">🔄 Refresh Player</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="storyboard-status" class="status-bar hidden" style="margin-bottom: 1rem;">
+                    <div class="spinner"></div>
+                    <span id="storyboard-status-text">Processing...</span>
+                </div>
+                <div id="scenes-container" style="display: flex; flex-direction: column; gap: 20px;">
+                    <!-- Scenes will be dynamically injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Scripts ─────────────────────────────────────────────────── -->
+
+    <!-- Toasts -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        // ── State ──────────────────────────────────────────────────
+        // Default to localhost:8000 if opened directly via file://
+        const API = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
+        let currentDocId = null;
+        let selectedFile = null;
+
+        // ── DOM refs ───────────────────────────────────────────────
+        const $ = id => document.getElementById(id);
+
+        const dropZone = $('drop-zone');
+        const fileInput = $('file-input');
+        const fileInfo = $('file-info');
+        const fileName = $('file-name');
+        const fileSize = $('file-size');
+        const btnUpload = $('btn-upload');
+        const uploadStatus = $('upload-status');
+        const statusDot = $('status-dot');
+        const statusText = $('status-text');
+        const docIdDisplay = $('doc-id-display');
+
+        const indexCard = $('index-card');
+        const btnIndex = $('btn-index');
+        const indexStatus = $('index-status');
+        const indexStatusText = $('index-status-text');
+
+        const generateCard = $('generate-card');
+        const btnGenerate = $('btn-generate');
+        const btnDelete = $('btn-delete');
+        const genStatus = $('gen-status');
+        const genStatusText = $('gen-status-text');
+
+        const scriptSection = $('script-output-section');
+        const scriptContainer = $('script-container');
+
+        // ── Pipeline progress ──────────────────────────────────────
+        function setStep(step) {
+            for (let i = 1; i <= 3; i++) {
+                const el = $(`step-${i}`);
+                const conn = $(`conn-${i}`);
+                el.classList.remove('active', 'done');
+                if (conn) conn.classList.remove('done');
+                if (i < step) { el.classList.add('done'); if (conn) conn.classList.add('done'); }
+                if (i === step) el.classList.add('active');
+            }
+        }
+
+        // ── Toasts ─────────────────────────────────────────────────
+        function toast(msg, type = 'info') {
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+            el.textContent = msg;
+            $('toast-container').appendChild(el);
+            setTimeout(() => el.remove(), 4500);
+        }
+
+        // ── File Selection ─────────────────────────────────────────
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) handleFile(fileInput.files[0]);
+        });
+
+        function handleFile(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (!['pdf', 'docx', 'pptx', 'txt'].includes(ext)) {
+                toast('Unsupported file type. Use PDF, DOCX, PPTX, or TXT.', 'error');
+                return;
+            }
+            if (file.size > 50 * 1024 * 1024) {
+                toast('File exceeds 50 MB limit.', 'error');
+                return;
+            }
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = formatSize(file.size);
+            fileInfo.classList.remove('hidden');
+            btnUpload.disabled = false;
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+
+        // ── Upload ─────────────────────────────────────────────────
+        btnUpload.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            btnUpload.disabled = true;
+            btnUpload.innerHTML = '<span class="spinner"></span> Uploading…';
+
+            const form = new FormData();
+            form.append('file', selectedFile);
+
+            try {
+                const res = await fetch(`${API}/upload-document`, { method: 'POST', body: form });
+                if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+                const data = await res.json();
+                currentDocId = data.document_id;
+
+                updateStatus('uploaded', `Uploaded — ${data.filename}`);
+                docIdDisplay.textContent = `ID: ${currentDocId}`;
+                uploadStatus.classList.remove('hidden');
+
+                indexCard.classList.remove('hidden');
+                setStep(2);
+                toast('Document uploaded successfully!', 'success');
+            } catch (err) {
+                toast(`Upload failed: ${err.message}`, 'error');
+                btnUpload.disabled = false;
+            }
+            btnUpload.innerHTML = 'Upload Document';
+        });
+
+        function updateStatus(status, text) {
+            statusDot.className = `status-dot ${status}`;
+            statusText.textContent = text;
+            uploadStatus.classList.remove('hidden');
+        }
+
+        // ── Build Index ────────────────────────────────────────────
+        btnIndex.addEventListener('click', async () => {
+            if (!currentDocId) return;
+            btnIndex.disabled = true;
+            btnIndex.innerHTML = '<span class="spinner"></span> Building…';
+            indexStatus.classList.remove('hidden');
+            indexStatusText.textContent = 'Parsing, chunking, embedding, and indexing…';
+            updateStatus('indexing', 'Indexing document…');
+
+            try {
+                const res = await fetch(`${API}/build-index/${currentDocId}`, { method: 'POST' });
+                if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+                const data = await res.json();
+
+                indexStatusText.textContent = `✓ Indexed — ${data.chunk_count} chunks created`;
+                indexStatus.querySelector('.spinner').style.display = 'none';
+                updateStatus('indexed', `Indexed — ${data.chunk_count} chunks`);
+
+                generateCard.classList.remove('hidden');
+                setStep(3);
+                toast(`Index built with ${data.chunk_count} chunks!`, 'success');
+            } catch (err) {
+                indexStatusText.textContent = `✗ Failed: ${err.message}`;
+                updateStatus('failed', 'Index build failed');
+                toast(`Index build failed: ${err.message}`, 'error');
+                btnIndex.disabled = false;
+            }
+            btnIndex.innerHTML = 'Build Index';
+        });
+
+        // ── Generate Script ────────────────────────────────────────
+        btnGenerate.addEventListener('click', async () => {
+            if (!currentDocId) return;
+            btnGenerate.disabled = true;
+            btnGenerate.innerHTML = '<span class="spinner"></span> Generating…';
+            genStatus.classList.remove('hidden');
+            genStatusText.textContent = 'Retrieving context & generating script via Groq LLM…';
+            updateStatus('generating', 'Generating script…');
+            scriptSection.classList.add('hidden');
+
+            const focusRaw = $('inp-focus').value.trim();
+            const body = {
+                goal: $('inp-goal').value,
+                target_audience: $('inp-audience').value,
+                tone: $('inp-tone').value,
+                duration_minutes: parseInt($('inp-duration').value) || 3,
+                output_language: $('inp-language').value,
+                depth: $('inp-depth').value,
+                focus_areas: focusRaw ? focusRaw.split(',').map(s => s.trim()) : [],
+                include_analogies: $('inp-analogies').checked,
+                include_visual_cues: $('inp-visuals').checked,
+            };
+
+            try {
+                const res = await fetch(`${API}/generate-script/${currentDocId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+                const script = await res.json();
+
+                renderScript(script);
+                updateStatus('generated', 'Script generated!');
+                genStatus.classList.add('hidden');
+                toast('Script generated successfully! ✨', 'success');
+            } catch (err) {
+                genStatusText.textContent = `✗ Failed: ${err.message}`;
+                updateStatus('failed', 'Generation failed');
+                toast(`Generation failed: ${err.message}`, 'error');
+            }
+            btnGenerate.disabled = false;
+            btnGenerate.innerHTML = '✨ Generate Script';
+        });
+
+        // ── Delete ─────────────────────────────────────────────────
+        btnDelete.addEventListener('click', async () => {
+            if (!currentDocId) return;
+            if (!confirm('Delete this document and all generated data?')) return;
+
+            try {
+                await fetch(`${API}/document/${currentDocId}`, { method: 'DELETE' });
+                toast('Document deleted.', 'info');
+                location.reload();
+            } catch (err) {
+                toast(`Delete failed: ${err.message}`, 'error');
+            }
+        });
+
+        // ── Render Script ──────────────────────────────────────────
+        function renderScript(s) {
+            let html = `
+                <div class="script-header">
+                    <h2>${esc(s.title)}</h2>
+                    <div class="script-meta">
+                        <span>🎯 ${esc(s.target_audience)}</span>
+                        <span>⏱ ${esc(s.estimated_duration)}</span>
+                        <span>📅 ${new Date(s.generated_at).toLocaleString()}</span>
+                    </div>
+                </div>
+                <div class="script-body">
+                    <!-- Hook -->
+                    <div class="script-block">
+                        <div class="script-block-title">🎣 Hook</div>
+                        <div class="hook-text">${esc(s.hook)}</div>
+                    </div>
+
+                    <!-- Introduction -->
+                    <div class="script-block">
+                        <div class="script-block-title">📖 Introduction</div>
+                        <p>${esc(s.introduction)}</p>
+                    </div>
+
+                    <!-- Sections -->
+                    <div class="script-block">
+                        <div class="script-block-title">📑 Main Sections</div>
+                        ${s.main_sections.map((sec, i) => `
+                            <div class="section-card">
+                                <h3>${i + 1}. ${esc(sec.heading)}</h3>
+                                <div class="summary">${esc(sec.summary)}</div>
+                                <div class="narration">${esc(sec.narration)}</div>
+                                ${sec.suggested_visuals && sec.suggested_visuals.length ? `
+                                    <div class="visuals-list">
+                                        ${sec.suggested_visuals.map(v => `<span class="visual-tag">🖼 ${esc(v)}</span>`).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <!-- Conclusion -->
+                    <div class="script-block">
+                        <div class="script-block-title">🎬 Conclusion</div>
+                        <p>${esc(s.conclusion)}</p>
+                    </div>
+
+                    <!-- Key Takeaways -->
+                    <div class="script-block">
+                        <div class="script-block-title">💡 Key Takeaways</div>
+                        <ul class="takeaways">
+                            ${(s.key_takeaways || []).map(t => `<li>${esc(t)}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <!-- Full Narration -->
+                    <div class="script-block">
+                        <div class="script-block-title">🎙 Full Narration Script</div>
+                        <div class="narration-full">${esc(s.narration_script)}</div>
+                    </div>
+
+                    ${s.source_coverage_notes ? `
+                    <div class="script-block">
+                        <div class="script-block-title">📋 Source Coverage Notes</div>
+                        <p style="color: var(--text-dim); font-size: 0.88rem;">${esc(s.source_coverage_notes)}</p>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+
+            scriptContainer.innerHTML = html;
+            scriptSection.classList.remove('hidden');
+            storyboardSection.classList.remove('hidden');
+            scriptSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        const checkIcon = '✓';
+
+        const btnStoryboard = $('btn-storyboard');
+        const storyboardSection = $('storyboard-section');
+        const scenesContainer = $('scenes-container');
+        const storyboardStatus = $('storyboard-status');
+        const storyboardStatusText = $('storyboard-status-text');
+
+        function esc(str) {
+            if (!str) return '';
+            const d = document.createElement('div');
+            d.textContent = str;
+            return d.innerHTML;
+        }
+        function setAssetStatus(sid, type, status) {
+            const el = document.getElementById(`status-${type}-${sid}`);
+            if (!el) return;
+            el.className = `asset-badge ${status}`;
+            if (status === 'outdated') {
+                // Future: show help tooltip
+            }
+        }
+
+
+        // ── Storyboard Generation ─────────────────────────────────
+        btnStoryboard.addEventListener('click', async () => {
+            if (!currentDocId) return;
+
+            btnStoryboard.disabled = true;
+            storyboardStatus.classList.remove('hidden');
+            storyboardStatusText.textContent = 'Segmenting script into scenes...';
+
+            try {
+                const res = await fetch(`${API}/scripts/${currentDocId}/segment-scenes`, { method: 'POST' });
+                if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+                const metadata = await res.json();
+
+                renderScenes(metadata.scenes);
+                toast('Storyboard generated! 🎉', 'success');
+                storyboardStatus.classList.add('hidden');
+            } catch (err) {
+                storyboardStatusText.textContent = `✗ Failed: ${err.message}`;
+                toast(`Storyboard generation failed: ${err.message}`, 'error');
+            }
+            btnStoryboard.disabled = false;
+        });
+
+        async function renderScenes(scenes) {
+            scenesContainer.innerHTML = '';
+
+            // Show fast rebuild if any clips exist
+            if (btnRebuildFast) {
+                const hasClips = scenes.some(s => s.clip_status === 'ready' || s.clip_path);
+                btnRebuildFast.style.display = hasClips ? 'block' : 'none';
+            }
+
+            scenes.forEach((scene, i) => {
+                const card = document.createElement('div');
+                card.className = 'scene-card';
+                card.id = `scene-card-${scene.scene_id}`;
+
+                // Construct the asset URLs
+                const audioUrl = `${API}/assets/${currentDocId}/audio/${scene.scene_id}.mp3`;
+                const imageUrl = `${API}/assets/${currentDocId}/images/${scene.scene_id}.jpg`;
+                const clipUrl = `${API}/assets/${currentDocId}/clips/${scene.scene_id}.mp4`;
+
+                card.innerHTML = `
+                    <div class="scene-header">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <h3>Scene ${i + 1}: ${esc(scene.heading)}</h3>
+                            <span class="scene-badge">~${scene.estimated_duration}s</span>
+                        </div>
+                        <div class="asset-status-bar">
+                            <span class="asset-badge ${scene.image_status || 'missing'}" id="status-img-${scene.scene_id}">IMG</span>
+                            <span class="asset-badge ${scene.audio_status || 'missing'}" id="status-aud-${scene.scene_id}">AUD</span>
+                            <span class="asset-badge ${scene.clip_status || 'missing'}" id="status-clip-${scene.scene_id}">CLIP</span>
+                        </div>
+                    </div>
+                    <div class="scene-content">
+                        <div class="scene-text">
+                            <p style="font-weight: 500; color: var(--text-dim); font-size: 0.85rem; margin-bottom: 5px; display: flex; justify-content: space-between;">
+                                <span>NARRATION:</span>
+                                <button class="btn-save-narration" data-id="${scene.scene_id}" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.7rem;">[Save Text]</button>
+                            </p>
+                            <textarea id="narration-${scene.scene_id}" style="width:100%; min-height:80px; background:rgba(0,0,0,0.2); color:var(--text); border:1px solid var(--border); border-radius:4px; padding:8px; font-size:0.9rem; font-family:inherit; resize:vertical; line-height:1.4;">${esc(scene.narration_text)}</textarea>
+                            
+                            <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; margin-top:10px;">
+                                <p style="font-weight: 500; color: var(--primary); font-size: 0.8rem; margin:0;">CONCEPT / VISUAL TYPE:</p>
+                                <p id="concept-${scene.scene_id}" style="font-size: 0.85rem; margin: 3px 0 8px 0;">${scene.concept_summary ? esc(scene.concept_summary) : 'Pending analysis...'} <span style="color:#888;">(${scene.visual_type || 'Unknown'})</span></p>
+                                
+                                <p style="font-weight: 500; color: var(--primary); font-size: 0.8rem; margin:0; display:flex; justify-content:space-between; align-items:center;">
+                                    <span>ENRICHED PROMPT:</span>
+                                    <div style="display:flex; gap:10px;">
+                                        <button class="btn-save-prompt" data-id="${scene.scene_id}" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.7rem;">[Save Prompt]</button>
+                                        <button onclick="document.getElementById('debug-${scene.scene_id}').classList.toggle('hidden')" style="background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:0.7rem;">[Debug Log]</button>
+                                        <button class="btn-analyze" data-id="${scene.scene_id}" style="background:none; border:1px solid var(--border); color:var(--text-dim); padding:2px 6px; border-radius:3px; font-size:0.7rem; cursor:pointer;">Preview AI Prompt</button>
+                                    </div>
+                                </p>
+                                <div id="debug-${scene.scene_id}" class="hidden" style="font-size: 0.75rem; color: #888; background: #000; padding: 5px; border-radius: 4px; margin: 5px 0; max-height: 80px; overflow-y: auto; font-family: monospace;">
+                                    ${scene.debug_logs && scene.debug_logs.length ? scene.debug_logs.map(log => `> ${esc(log)}`).join('<br>') : 'No logs yet.'}
+                                </div>
+                                <textarea id="prompt-${scene.scene_id}" style="width:100%; min-height:60px; margin-top:5px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:4px; padding:6px; font-size:0.85rem; font-family:inherit; resize:vertical;">${scene.enriched_prompt ? esc(scene.enriched_prompt) : esc(scene.visual_prompt)}</textarea>
+                                
+                                <div id="candidates-${scene.scene_id}" style="display:flex; gap:5px; margin-top:5px; flex-wrap:wrap;">
+                                    ${scene.prompt_candidates ? Object.entries(scene.prompt_candidates).map(([key, val]) => `
+                                        <button onclick="document.getElementById('prompt-${scene.scene_id}').value = \`${val.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`" style="font-size:0.65rem; padding:2px 5px; background:rgba(255,255,255,0.05); color:#888; border:1px solid rgba(255,255,255,0.1); border-radius:3px; cursor:pointer;">${key.replace('_', ' ')}</button>
+                                    `).join('') : ''}
+                                </div>
+                            </div>
+                            
+                            <div class="scene-actions" style="margin-top: auto; padding-top: 15px; display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button class="btn btn-secondary btn-audio ${scene.audio_status === 'ready' ? 'done' : ''}" data-id="${scene.scene_id}" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                                    ${scene.audio_status === 'ready' ? '✓ Audio Ready' : '🎵 Generate Audio'}
+                                </button>
+                                
+                                <div style="display:flex; gap:4px; align-items:center;">
+                                    <select class="style-select" id="style-${scene.scene_id}" style="background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 0.3rem; border-radius: 4px; font-size: 0.8rem;">
+                                        <option value="cinematic_educational" ${scene.style_preset === 'cinematic_educational' ? 'selected' : ''}>Cinematic Educational</option>
+                                        <option value="ghibli_educational" ${scene.style_preset === 'ghibli_educational' ? 'selected' : ''}>Ghibli Studio</option>
+                                        <option value="scientific_infographic" ${scene.style_preset === 'scientific_infographic' ? 'selected' : ''}>Scientific Infographic</option>
+                                        <option value="textbook_diagram" ${scene.style_preset === 'textbook_diagram' ? 'selected' : ''}>Textbook Diagram</option>
+                                        <option value="minimalist_biology" ${scene.style_preset === 'minimalist_biology' ? 'selected' : ''}>Minimalist Biology</option>
+                                        <option value="storybook_science" ${scene.style_preset === 'storybook_science' ? 'selected' : ''}>Storybook Science</option>
+                                    </select>
+                                    <button class="btn btn-secondary btn-image ${scene.image_status === 'ready' ? 'done' : ''}" data-id="${scene.scene_id}" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                                        ${scene.image_status === 'ready' ? '🖼 Regenerate Image' : '🖼 Generate Image'}
+                                    </button>
+                                </div>
+                                
+                                <button class="btn btn-primary btn-clip ${scene.clip_status === 'ready' ? 'done' : 'hidden'}" data-id="${scene.scene_id}" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                                    ${scene.clip_status === 'ready' ? '✓ Clip Ready' : '🎬 Render Scene Video'}
+                                </button>
+                                <button class="btn btn-secondary btn-preview-scene ${scene.clip_status === 'ready' ? '' : 'hidden'}" data-id="${scene.scene_id}" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-color:var(--primary); color:var(--primary);">👁 Preview Clip</button>
+                            </div>
+                        </div>
+                        <div class="scene-media" id="media-${scene.scene_id}">
+                            <div style="color: var(--text-dim); font-size: 0.8rem; text-align: center; padding: 20px;">
+                                Assets will appear here once generated
+                            </div>
+                        </div>
+                    </div>
+                `;
+                scenesContainer.appendChild(card);
+
+                // Auto-load media if ready
+                if (scene.image_status === 'ready') updateSceneMedia(scene.scene_id, 'image');
+                if (scene.audio_status === 'ready') updateSceneMedia(scene.scene_id, 'audio');
+                if (scene.clip_status === 'ready') updateSceneMedia(scene.scene_id, 'clip');
+            });
+
+            // Attach specialized listeners to buttons
+            document.querySelectorAll('.btn-audio').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const sceneId = e.target.getAttribute('data-id');
+                    e.target.disabled = true;
+                    e.target.innerHTML = 'Generating...';
+
+                    try {
+                        setAssetStatus(sceneId, 'aud', 'generating');
+                        const res = await fetch(`${API}/scenes/${sceneId}/generate-audio?project_id=${currentDocId}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({})
+                        });
+                        if (!res.ok) throw new Error('Audio generation failed');
+
+                        updateSceneMedia(sceneId, 'audio');
+                        setAssetStatus(sceneId, 'aud', 'ready');
+                        e.target.innerHTML = '✓ Audio Ready';
+                        e.target.classList.add('done');
+                    } catch (err) {
+                        setAssetStatus(sceneId, 'aud', 'error');
+                        toast(err.message, 'error');
+                        e.target.disabled = false;
+                        e.target.innerHTML = '🎵 Retry Audio';
+                    }
+                });
+            });
+
+            document.querySelectorAll('.btn-analyze').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const sceneId = e.target.getAttribute('data-id');
+                    const styleSelect = document.getElementById(`style-${sceneId}`);
+                    const selectedStyle = styleSelect ? styleSelect.value : 'cinematic_educational';
+
+                    e.target.disabled = true;
+                    e.target.innerHTML = 'Analyzing...';
+
+                    try {
+                        const res = await fetch(`${API}/scenes/${sceneId}/analyze-visual?project_id=${currentDocId}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ image_style: selectedStyle })
+                        });
+                        if (!res.ok) throw new Error('Analysis failed');
+
+                        const updatedScene = await res.json();
+                        document.getElementById(`concept-${sceneId}`).innerHTML = `${esc(updatedScene.concept_summary)} <span
+        style="color:#888;">(${updatedScene.visual_type || 'Unknown'})</span>`;
+                        document.getElementById(`prompt-${sceneId}`).value = updatedScene.enriched_prompt;
+
+                        // Update candidates UI
+                        const candContainer = document.getElementById(`candidates-${sceneId}`);
+                        if (candContainer && updatedScene.prompt_candidates) {
+                            candContainer.innerHTML = Object.entries(updatedScene.prompt_candidates).map(([key, val]) => `
+    <button onclick="document.getElementById('prompt-${sceneId}').value = \`${val.replace(/`/g, '\\`')}\`"
+        style="font-size:0.65rem; padding:2px 5px; background:rgba(255,255,255,0.05); color:#888; border:1px solid rgba(255,255,255,0.1); border-radius:3px; cursor:pointer;">${key.replace('_',
+                                ' ')}</button>
+    `).join('');
+                        }
+
+                        // Update Debug UI
+                        const debugContainer = document.getElementById(`debug-${sceneId}`);
+                        if (debugContainer && updatedScene.debug_logs) {
+                            debugContainer.innerHTML = updatedScene.debug_logs.map(log => `> ${esc(log)}`).join('<br>');
+                        }
+                        toast('Visual plan updated!', 'success');
+                    } catch (err) {
+                        toast(err.message, 'error');
+                    } finally {
+                        e.target.disabled = false;
+                        e.target.innerHTML = 'Preview AI Prompt';
+                    }
+                });
+            });
+
+            // Save Narration
+            document.querySelectorAll('.btn-save-narration').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const sceneId = e.target.getAttribute('data-id');
+                    const text = document.getElementById(`narration-${sceneId}`).value;
+                    const originalText = e.target.innerHTML;
+                    e.target.innerHTML = 'Saving...';
+                    try {
+                        const res = await
+                            fetch(`${API}/scenes/${sceneId}/narration?project_id=${currentDocId}&narration=${encodeURIComponent(text)}`, {
+                                method: 'PATCH'
+                            });
+                        if (!res.ok) throw new Error('Failed to save narration');
+                        toast('Narration saved!', 'info');
+                        e.target.innerHTML = '[Saved]';
+                        setTimeout(() => e.target.innerHTML = originalText, 2000);
+
+                        setAssetStatus(sceneId, 'aud', 'outdated');
+                        setAssetStatus(sceneId, 'clip', 'outdated');
+
+                        const audioBtn = document.querySelector(`.btn-audio[data-id="${sceneId}"]`);
+                        if (audioBtn) {
+                            audioBtn.innerHTML = '🎵 Regenerate Audio';
+                            audioBtn.classList.remove('done');
+                            audioBtn.disabled = false;
+                        }
+                    } catch (err) { toast(err.message, 'error'); e.target.innerHTML = originalText; }
+                });
+            });
+
+            // Save Prompt
+            document.querySelectorAll('.btn-save-prompt').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const sceneId = e.target.getAttribute('data-id');
+                    const prompt = document.getElementById(`prompt-${sceneId}`).value;
+                    const originalText = e.target.innerHTML;
+                    e.target.innerHTML = 'Saving...';
+                    try {
+                        const res = await fetch(`${API}/scenes/${sceneId}/prompt?project_id=${currentDocId}&prompt=${encodeURIComponent(prompt)}`, { method: 'PATCH' });
+                        if (!res.ok) throw new Error('Failed to save prompt');
+                        toast('Prompt saved!', 'info');
+                        e.target.innerHTML = '[Saved]';
+                        setTimeout(() => e.target.innerHTML = originalText, 2000);
+
+                        setAssetStatus(sceneId, 'img', 'outdated');
+                        setAssetStatus(sceneId, 'clip', 'outdated');
+
+                        const imgBtn = document.querySelector(`.btn-image[data-id="${sceneId}"]`);
+                        if (imgBtn) {
+                            imgBtn.innerHTML = '🖼 Re-generate Image';
+                            imgBtn.classList.remove('done');
+                            imgBtn.disabled = false;
+                        }
+                    } catch (err) { toast(err.message, 'error'); e.target.innerHTML = originalText; }
+                });
+            });
+
+            // Generate Audio
+            document.querySelectorAll('.btn-audio').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const sceneId = e.target.getAttribute('data-id');
+                    e.target.disabled = true;
+                    e.target.innerHTML = 'Generating...';
+                    try {
+                        setAssetStatus(sceneId, 'aud', 'generating');
+                        const res = await fetch(`${API}/scenes/${sceneId}/generate-audio?project_id=${currentDocId}`, { method: 'POST' });
+                        if (!res.ok) throw new Error('Audio generation failed');
+                        updateSceneMedia(sceneId, 'audio');
+                        setAssetStatus(sceneId, 'aud', 'ready');
+                        e.target.innerHTML = '✓ Audio Ready';
+                        e.target.classList.add('done');
+                    } catch (err) {
+                        setAssetStatus(sceneId, 'aud', 'error');
+                        toast(err.message, 'error');
+                        e.target.disabled = false;
+                        e.target.innerHTML = '🎵 Retry Audio';
+                    }
+                });
+            });
+
+            document.querySelectorAll('.btn-image').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const sceneId = e.target.getAttribute('data-id');
+                    const styleSelect = document.getElementById(`style-${sceneId}`);
+                    const selectedStyle = styleSelect ? styleSelect.value : 'cinematic_educational';
+                    const promptTextarea = document.getElementById(`prompt-${sceneId}`);
+                    const customPrompt = promptTextarea ? promptTextarea.value : null;
+
+                    e.target.disabled = true;
+                    e.target.innerHTML = 'Generating...';
+                    try {
+                        setAssetStatus(sceneId, 'img', 'generating');
+                        const res = await fetch(`${API}/scenes/${sceneId}/generate-image?project_id=${currentDocId}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ image_style: selectedStyle, custom_prompt: customPrompt })
+                        });
+                        if (!res.ok) throw new Error('Image generation failed');
+                        updateSceneMedia(sceneId, 'image');
+                        setAssetStatus(sceneId, 'img', 'ready');
+                        e.target.innerHTML = '🖼 Regenerate Image';
+                        e.target.classList.add('done');
+                        e.target.disabled = false;
+                    } catch (err) {
+                        setAssetStatus(sceneId, 'img', 'error');
+                        toast(err.message, 'error');
+                        e.target.disabled = false;
+                        e.target.innerHTML = '🖼 Retry Image';
+                    }
+                });
+            });
+
+            document.querySelectorAll('.btn-clip').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const sceneId = e.target.getAttribute('data-id');
+                    e.target.disabled = true;
+                    e.target.innerHTML = 'Rendering...';
+                    try {
+                        setAssetStatus(sceneId, 'clip', 'generating');
+                        const res = await fetch(`${API}/scenes/${sceneId}/generate-clip?project_id=${currentDocId}`, { method: 'POST' });
+                        if (!res.ok) throw new Error('Clip rendering failed');
+                        updateSceneMedia(sceneId, 'clip');
+                        setAssetStatus(sceneId, 'clip', 'ready');
+                        e.target.innerHTML = '✓ Clip Ready';
+                        e.target.classList.add('done');
+
+                        // Show preview button
+                        const previewBtn = document.querySelector(`.btn-preview-scene[data-id="${sceneId}"]`);
+                        if (previewBtn) previewBtn.classList.remove('hidden');
+                        if (btnRebuildFast) btnRebuildFast.style.display = 'block';
+                    } catch (err) {
+                        setAssetStatus(sceneId, 'clip', 'error');
+                        toast(err.message, 'error');
+                        e.target.disabled = false;
+                        e.target.innerHTML = '🎬 Retry Clip';
+                    }
+                });
+            });
+
+            // Final Preview Listener
+            document.querySelectorAll('.btn-preview-scene').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const sceneId = e.target.getAttribute('data-id');
+                    updateSceneMedia(sceneId, 'clip');
+                });
+            });
+        }
+
+        const btnAssembleClips = $('btn-assemble-clips');
+        const btnRenderFinal = $('btn-render-final');
+        const btnRebuildFast = $('btn-rebuild-fast');
+        const finalVideoCard = $('final-video-card');
+        const finalVideoPlayer = $('final-video-player');
+        const downloadVideoLink = $('download-video-link');
+        const btnRefreshPreview = $('btn-refresh-preview');
+
+        // ── Assemble All Clips ────────────────────────────────────
+        btnAssembleClips.addEventListener('click', async () => {
+            if (!currentDocId) return;
+            btnAssembleClips.disabled = true;
+            btnAssembleClips.innerHTML = '<span class="spinner"></span> Assembling...';
+            storyboardStatus.classList.remove('hidden');
+            storyboardStatusText.textContent = 'Rendering all individual scene clips (MP4)...';
+
+            try {
+                const res = await fetch(`${API}/projects/${currentDocId}/generate-scene-clips`, { method: 'POST' });
+                if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+                const data = await res.json();
+
+                toast(`Success: ${data.rendered_count} clips rendered!`, 'success');
+                // Refresh all scene media to show clips if possible
+                const sceneCards = document.querySelectorAll('.scene-card');
+                sceneCards.forEach(card => {
+                    const sid = card.id.replace('scene-card-', '');
+                    updateSceneMedia(sid, 'clip');
+                });
+            } catch (err) {
+                toast(`Assembly failed: ${err.message}`, 'error');
+            } finally {
+                btnAssembleClips.disabled = false;
+                btnAssembleClips.innerHTML = '🎞 Assemble Clips';
+                storyboardStatus.classList.add('hidden');
+            }
+        });
+
+        // ── Render Final Movie ─────────────────────────────────────
+        btnRenderFinal.addEventListener('click', async () => {
+            if (!currentDocId) return;
+            btnRenderFinal.disabled = true;
+            btnRenderFinal.innerHTML = '<span class="spinner"></span> Exporting...';
+            storyboardStatus.classList.remove('hidden');
+            storyboardStatusText.textContent = 'Concatenating all clips into final movie... (This may take a minute)';
+
+            try {
+                const res = await fetch(`${API}/projects/${currentDocId}/render-final-video`, { method: 'POST' });
+                if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+
+                toast('Final movie render successful! 🎞', 'success');
+                showFinalVideo();
+            } catch (err) {
+                toast(`Final render failed: ${err.message}`, 'error');
+            } finally {
+                btnRenderFinal.disabled = false;
+                btnRenderFinal.innerHTML = '🎬 Render Final Movie';
+                storyboardStatus.classList.add('hidden');
+            }
+        });
+
+        // ── Fast Rebuild (Cache) ───────────────────────────────────
+        btnRebuildFast.addEventListener('click', async () => {
+            if (!currentDocId) return;
+            btnRebuildFast.disabled = true;
+            btnRebuildFast.innerHTML = '<span class="spinner"></span> Rebuilding...';
+            storyboardStatus.classList.remove('hidden');
+            storyboardStatusText.textContent = 'Rapidly rebuilding video from cached clips...';
+
+            try {
+                const res = await fetch(`${API}/projects/${currentDocId}/rebuild-video`, { method: 'POST' });
+                if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+
+                toast('Fast rebuild successful! ⚡', 'success');
+                showFinalVideo();
+            } catch (err) {
+                toast(`Rebuild failed: ${err.message}`, 'error');
+            } finally {
+                btnRebuildFast.disabled = false;
+                btnRebuildFast.innerHTML = '⚡ Fast Rebuild (Cache)';
+                storyboardStatus.classList.add('hidden');
+            }
+        });
+
+        async function showFinalVideo() {
+            const videoUrl = `${API}/projects/${currentDocId}/video?t=${new Date().getTime()}`;
+            finalVideoPlayer.src = videoUrl;
+            downloadVideoLink.href = videoUrl;
+            finalVideoCard.classList.remove('hidden');
+            finalVideoCard.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        btnRefreshPreview.addEventListener('click', showFinalVideo);
+
+        function updateSceneMedia(sceneId, type) {
+            const mediaContainer = $(`media-${sceneId}`);
+
+            // Clear placeholder text if it's there
+            if (mediaContainer.querySelector('div')) {
+                mediaContainer.innerHTML = '';
+            }
+
+            // Show Fast Rebuild button if a video exists
+            if (btnRebuildFast) btnRebuildFast.style.display = 'block';
+
+            // Cache bypass strings
+            const ts = new Date().getTime();
+
+            if (type === 'audio') {
+                const existingAudio = mediaContainer.querySelector('audio');
+                if (existingAudio) existingAudio.remove();
+
+                const aud = document.createElement('audio');
+                aud.controls = true;
+                aud.src = `${API}/assets/${currentDocId}/audio/${sceneId}.mp3?t=${ts}`;
+                mediaContainer.appendChild(aud);
+            }
+            else if (type === 'image') {
+                const existingImg = mediaContainer.querySelector('img');
+                if (existingImg) existingImg.remove();
+
+                const img = document.createElement('img');
+                img.src = `${API}/assets/${currentDocId}/images/${sceneId}.jpg?t=${ts}`;
+                // Put image before audio/video
+                if (mediaContainer.firstChild) {
+                    mediaContainer.insertBefore(img, mediaContainer.firstChild);
+                } else {
+                    mediaContainer.appendChild(img);
+                }
+            }
+            else if (type === 'clip') {
+                const existingClip = mediaContainer.querySelector('video');
+                if (existingClip) existingClip.remove();
+
+                // Also hide image if clip is ready to save space
+                const existingImg = mediaContainer.querySelector('img');
+                if (existingImg) existingImg.style.display = 'none';
+
+                const vid = document.createElement('video');
+                vid.controls = true;
+                vid.src = `${API}/assets/${currentDocId}/clips/${sceneId}.mp4?t=${ts}`;
+                vid.style.width = '100%';
+                vid.style.borderRadius = '4px';
+                mediaContainer.appendChild(vid);
+            }
+        }
+    </script>
+</body>
+
+</html>
